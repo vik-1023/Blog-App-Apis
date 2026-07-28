@@ -4,6 +4,7 @@ import org.blog.apis.payloads.PostRequestDto;
 import org.blog.apis.payloads.PostResponse;
 import org.blog.apis.payloads.PostResponseDto;
 import org.blog.apis.services.PostService;
+import org.blog.apis.utils.AppConstants;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,10 +29,10 @@ public class PostController {
 
     @GetMapping("/posts")
     public ResponseEntity<PostResponse> getAllPosts(
-            @RequestParam(value = "pageNumber", defaultValue = "0") Integer pageNumber,
-            @RequestParam(value = "pageSize", defaultValue = "5") Integer pageSize,
-            @RequestParam(value = "sortBy", defaultValue = "postId") String sortBy,
-            @RequestParam(value = "sortDir", defaultValue = "asc") String sortDir
+            @RequestParam(value = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER) Integer pageNumber,
+            @RequestParam(value = "pageSize", defaultValue = AppConstants.PAGE_SIZE) Integer pageSize,
+            @RequestParam(value = "sortBy", defaultValue = AppConstants.SORT_BY) String sortBy,
+            @RequestParam(value = "sortDir", defaultValue = AppConstants.SORT_DIR) String sortDir
     ) {
         PostResponse allPost = postService.getAllPosts(pageNumber, pageSize, sortBy, sortDir);
         return ResponseEntity.ok(allPost);
