@@ -11,6 +11,9 @@ import java.util.List;
 @Repository
 public interface PostRepo extends JpaRepository<Post, Long> {
     List<Post> findByUser(User user);
+
     List<Post> findByCategory(Category category);
+
+    List<Post> findByPostTitleContainingIgnoreCase(String keyword);
 
 }

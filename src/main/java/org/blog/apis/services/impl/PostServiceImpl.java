@@ -6,12 +6,18 @@ import org.blog.apis.entities.Post;
 import org.blog.apis.entities.User;
 import org.blog.apis.exceptions.ResourceNotFoundException;
 import org.blog.apis.payloads.PostRequestDto;
+import org.blog.apis.payloads.PostResponse;
 import org.blog.apis.payloads.PostResponseDto;
+import org.blog.apis.payloads.UserResponseDto;
 import org.blog.apis.repositories.CategoryRepo;
 import org.blog.apis.repositories.PostRepo;
 import org.blog.apis.repositories.UserRepositories;
 import org.blog.apis.services.PostService;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -45,10 +51,30 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public List<PostResponseDto> allPosts() {
-        List<Post> allPost = postRepo.findAll();
-        return allPost.stream().map(post -> modelMapper.map(post, PostResponseDto.class)).toList();
+    public PostResponse getAllPosts(Integer pageNumber, Integer pageSize, String sortBy, String sortDir) {
+        Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, sort);
+        Page<Post> pagePost = postRepo.findAll(pageable);
+        List<Post> posts = pagePost.getContent();
+        List<PostResponseDto> postDtos = posts.stream().map(post -> modelMapper.map(post, PostResponseDto.class)).toList();
+
+        PostResponse response = new PostResponse();
+        response.setContent(postDtos);
+        response.setPageNumber(pagePost.getNumber());
+        response.setPageSize(pagePost.getSize());
+        response.setTotalElements(pagePost.getTotalElements());
+        response.setTotalPages(pagePost.getTotalPages());
+        response.setLastPage(pagePost.isLast());
+
+        return response;
     }
+
+    @Override
+    public List<PostResponseDto> searchPosts(String keyword) {
+        List<Post> posts = postRepo.findByPostTitleContainingIgnoreCase(keyword);
+        return posts.stream().map(post -> modelMapper.map(post, PostResponseDto.class)).toList();
+    }
+
 
     @Override
     public PostResponseDto getPostUsingId(Long id) {
