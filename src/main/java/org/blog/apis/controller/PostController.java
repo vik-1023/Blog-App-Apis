@@ -1,6 +1,7 @@
 package org.blog.apis.controller;
 
 import org.blog.apis.payloads.PostRequestDto;
+import org.blog.apis.payloads.PostResponse;
 import org.blog.apis.payloads.PostResponseDto;
 import org.blog.apis.services.PostService;
 import org.springframework.http.HttpStatus;
@@ -26,8 +27,13 @@ public class PostController {
     }
 
     @GetMapping("/posts")
-    public ResponseEntity<List<PostResponseDto>> getAllPosts() {
-        List<PostResponseDto> allPost = postService.allPosts();
+    public ResponseEntity<PostResponse> getAllPosts(
+            @RequestParam(value = "pageNumber", defaultValue = "0") Integer pageNumber,
+            @RequestParam(value = "pageSize", defaultValue = "5") Integer pageSize,
+            @RequestParam(value = "sortBy", defaultValue = "postId") String sortBy,
+            @RequestParam(value = "sortDir", defaultValue = "asc") String sortDir
+    ) {
+        PostResponse allPost = postService.getAllPosts(pageNumber, pageSize, sortBy, sortDir);
         return ResponseEntity.ok(allPost);
     }
 
@@ -59,5 +65,11 @@ public class PostController {
     public ResponseEntity<List<PostResponseDto>> getPostByCategory(@PathVariable Long id) {
         List<PostResponseDto> post = postService.findPostUsingCategoryId(id);
         return ResponseEntity.ok(post);
+    }
+
+    @GetMapping("/posts/search/{keyword}")
+    public ResponseEntity<List<PostResponseDto>> search(@PathVariable String keyword) {
+        List<PostResponseDto> search = postService.searchPosts(keyword);
+        return ResponseEntity.ok(search);
     }
 }
