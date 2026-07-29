@@ -11,11 +11,18 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger logger =
+            LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse>handleResponseNotFound(ResourceNotFoundException ex, HttpServletRequest request){
+    public ResponseEntity<ErrorResponse> handleResponseNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
+        logger.warn("Resource not found URI: {},Error :{}", request.getRequestURI(), ex.getMessage());
+
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.NOT_FOUND.value(),
@@ -23,16 +30,38 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 request.getRequestURI()
         );
-return new ResponseEntity<>(error,HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String,String>>handleValidationException(MethodArgumentNotValidException ex){
-        HashMap<String,String> errors=new HashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(error->{
-errors.put(error.getField(),error.getDefaultMessage());
+    public ResponseEntity<Map<String, String>> handleValidationException(MethodArgumentNotValidException ex, HttpServletRequest request) {
+        logger.warn("Validation failed for request: {}", request.getRequestURI());
+        HashMap<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getFieldErrors().forEach(error -> {
+            logger.warn("Validation error - Field: {}, Message: {}",
+                    error.getField(),
+                    error.getDefaultMessage());
+            errors.put(error.getField(), error.getDefaultMessage());
         });
 
-        return new ResponseEntity<>(errors,HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGlobalException(
+            Exception ex,
+            HttpServletRequest request) {
+
+        logger.error("Unexpected exception occurred", ex);
+
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Internal Server Error",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
