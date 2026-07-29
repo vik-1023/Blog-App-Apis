@@ -11,19 +11,24 @@ import org.blog.apis.payloads.PostResponseDto;
 import org.blog.apis.repositories.CategoryRepo;
 import org.blog.apis.repositories.PostRepo;
 import org.blog.apis.repositories.UserRepositories;
+import org.blog.apis.services.ImageService;
 import org.blog.apis.services.PostService;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class PostServiceImpl implements PostService {
@@ -33,12 +38,17 @@ public class PostServiceImpl implements PostService {
     private final ModelMapper modelMapper;
     private static final Logger logger =
             LoggerFactory.getLogger(PostServiceImpl.class);
+    @Value("${project.image}")
+    private String path;
 
-    public PostServiceImpl(PostRepo postRepo, UserRepositories userRepositories, CategoryRepo categoryRepo, ModelMapper modelMapper) {
+    private ImageService imageService;
+
+    public PostServiceImpl(PostRepo postRepo, UserRepositories userRepositories, CategoryRepo categoryRepo, ModelMapper modelMapper, ImageService imageService) {
         this.postRepo = postRepo;
         this.userRepositories = userRepositories;
         this.categoryRepo = categoryRepo;
         this.modelMapper = modelMapper;
+        this.imageService = imageService;
     }
 
 
@@ -128,6 +138,17 @@ public class PostServiceImpl implements PostService {
         List<Post> posts = postRepo.findByCategory(category);
         logger.info("Post find successfully with categoryId : {}", id);
         return posts.stream().map(post -> modelMapper.map(post, PostResponseDto.class)).toList();
+    }
+
+    @Override
+    public PostResponseDto uploadPostImage(MultipartFile file, Long postId) throws IOException {
+
+        Post posts = postRepo.findById(postId).orElseThrow(() -> new ResourceNotFoundException("post", "postId", postId));
+        String filename = imageService.uploadImage(path, file);
+        posts.setPostImage(filename);
+        Post savedPost = postRepo.save(posts);
+
+        return modelMapper.map(savedPost, PostResponseDto.class);
     }
 
 
