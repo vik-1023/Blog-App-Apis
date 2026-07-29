@@ -3,7 +3,9 @@ package org.blog.apis.services;
 import org.blog.apis.payloads.PostRequestDto;
 import org.blog.apis.payloads.PostResponse;
 import org.blog.apis.payloads.PostResponseDto;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 public interface PostService {
@@ -29,5 +31,7 @@ public interface PostService {
 
 
     List<PostResponseDto> findPostUsingCategoryId(Long id);
+
+    PostResponseDto uploadPostImage(MultipartFile file, Long postId) throws IOException;
 
 }
