@@ -7,53 +7,59 @@ import org.blog.apis.payloads.UserResponseDto;
 import org.blog.apis.repositories.UserRepositories;
 import org.blog.apis.services.UserServices;
 import org.modelmapper.ModelMapper;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-@Service
-public class UserServiceImpl  implements UserServices {
-   private final UserRepositories repositories;
-   private final ModelMapper modelMapper;
 
-    public UserServiceImpl(UserRepositories repositories,ModelMapper modelMapper) {
+@Service
+public class UserServiceImpl implements UserServices {
+    private final UserRepositories repositories;
+    private final ModelMapper modelMapper;
+    private final PasswordEncoder passwordEncoder;
+
+    public UserServiceImpl(UserRepositories repositories, ModelMapper modelMapper, PasswordEncoder ppasswordEncoder) {
         this.repositories = repositories;
-        this.modelMapper=modelMapper;
+        this.modelMapper = modelMapper;
+        this.passwordEncoder = ppasswordEncoder;
     }
 
 
     @Override
     public UserResponseDto createUser(UserRequestDto request) {
-       User user= modelMapper.map(request,User.class);
-       User savedUser= repositories.save(user);
-        return modelMapper.map(savedUser,UserResponseDto.class);
+        User user = modelMapper.map(request, User.class);
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        User savedUser = repositories.save(user);
+        return modelMapper.map(savedUser, UserResponseDto.class);
     }
 
     @Override
     public List<UserResponseDto> showAllUsers() {
-       List<User> allUsers= repositories.findAll();
-        return allUsers.stream().map(user->modelMapper.map(allUsers,UserResponseDto.class)).toList();
+        List<User> allUsers = repositories.findAll();
+        return allUsers.stream().map(user -> modelMapper.map(allUsers, UserResponseDto.class)).toList();
     }
+
     @Override
     public UserResponseDto getUserUsingId(Long id) {
-      User user=  repositories.findById(id).orElseThrow(()-> new ResourceNotFoundException("user","id",id));
-        return modelMapper.map(user,UserResponseDto.class);
+        User user = repositories.findById(id).orElseThrow(() -> new ResourceNotFoundException("user", "id", id));
+        return modelMapper.map(user, UserResponseDto.class);
     }
 
     @Override
     public UserResponseDto updateUserUsingId(UserRequestDto request, Long id) {
-       User user= repositories.findById(id).orElseThrow(()->new ResourceNotFoundException("user","id",id));
-       user.setName(request.getName());
-       user.setEmail(request.getEmail());
-       user.setAbout(request.getAbout());
-       user.setPassword(request.getPassword());
-       User updatedUser=repositories.save((user));
-       return modelMapper.map(updatedUser,UserResponseDto.class);
+        User user = repositories.findById(id).orElseThrow(() -> new ResourceNotFoundException("user", "id", id));
+        user.setName(request.getName());
+        user.setEmail(request.getEmail());
+        user.setAbout(request.getAbout());
+        user.setPassword(request.getPassword());
+        User updatedUser = repositories.save((user));
+        return modelMapper.map(updatedUser, UserResponseDto.class);
     }
 
     @Override
-    public void deleteUser(Long id){
+    public void deleteUser(Long id) {
         User user = repositories.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("user","id",id));
+                .orElseThrow(() -> new ResourceNotFoundException("user", "id", id));
         repositories.delete(user);
     }
 }
