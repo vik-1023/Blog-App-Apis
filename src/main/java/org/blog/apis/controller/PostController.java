@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,6 +36,7 @@ public class PostController {
         this.imageService = imageService;
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @PostMapping("/users/{user_id}/categories/{category_id}/posts")
     public ResponseEntity<PostResponseDto> create(@RequestBody PostRequestDto requestDto, @PathVariable Long user_id, @PathVariable Long category_id) {
         PostResponseDto createdPost = postService.createPost(requestDto, user_id, category_id);
@@ -53,12 +55,14 @@ public class PostController {
         return ResponseEntity.ok(post);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @PutMapping("/posts/{id}")
     public ResponseEntity<PostResponseDto> update(@RequestBody PostRequestDto postRequestDto, @PathVariable Long id) {
         PostResponseDto update = postService.updatePost(postRequestDto, id);
         return ResponseEntity.ok(update);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @DeleteMapping("/posts/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         postService.deletePost(id);

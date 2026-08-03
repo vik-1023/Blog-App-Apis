@@ -3,7 +3,9 @@ package org.blog.apis.services.impl;
 
 import org.blog.apis.entities.Category;
 import org.blog.apis.entities.Post;
+import org.blog.apis.entities.Role;
 import org.blog.apis.entities.User;
+import org.blog.apis.exceptions.AccessDeniedException;
 import org.blog.apis.exceptions.ResourceNotFoundException;
 import org.blog.apis.payloads.PostRequestDto;
 import org.blog.apis.payloads.PostResponse;
@@ -11,6 +13,7 @@ import org.blog.apis.payloads.PostResponseDto;
 import org.blog.apis.repositories.CategoryRepo;
 import org.blog.apis.repositories.PostRepo;
 import org.blog.apis.repositories.UserRepositories;
+import org.blog.apis.security.SecurityUtil;
 import org.blog.apis.services.ImageService;
 import org.blog.apis.services.PostService;
 import org.modelmapper.ModelMapper;
@@ -20,6 +23,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -42,13 +47,15 @@ public class PostServiceImpl implements PostService {
     private String path;
 
     private ImageService imageService;
+    private final SecurityUtil securityUtil;
 
-    public PostServiceImpl(PostRepo postRepo, UserRepositories userRepositories, CategoryRepo categoryRepo, ModelMapper modelMapper, ImageService imageService) {
+    public PostServiceImpl(PostRepo postRepo, UserRepositories userRepositories, CategoryRepo categoryRepo, ModelMapper modelMapper, ImageService imageService, SecurityUtil securityUtil) {
         this.postRepo = postRepo;
         this.userRepositories = userRepositories;
         this.categoryRepo = categoryRepo;
         this.modelMapper = modelMapper;
         this.imageService = imageService;
+        this.securityUtil = securityUtil;
     }
 
 
@@ -105,11 +112,23 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public PostResponseDto updatePost(PostRequestDto postRequestDto, Long id) {
-        logger.info("Updating post with id: {}", id);
-        Post post = postRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("post", "postId", id));
+        User currentUser = securityUtil.getCurrentUser();
+
+        Post post = postRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Post", "id", id));
+
+        boolean isAdmin = securityUtil.isCurrentAdmin(currentUser);
+
+        boolean isOwner = securityUtil.isOwner(currentUser, post);
+
+        if (!isAdmin && !isOwner) {
+            throw new AccessDeniedException("You are not allowed to update this post");
+        }
+
         modelMapper.map(postRequestDto, post);
+
         Post savedPost = postRepo.save(post);
-        logger.info("Post updated successfully with id: {}", id);
+
         return modelMapper.map(savedPost, PostResponseDto.class);
     }
 

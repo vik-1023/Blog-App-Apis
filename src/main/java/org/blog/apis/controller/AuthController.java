@@ -30,10 +30,11 @@ public class AuthController {
     }
 
 
+
     @PostMapping("/login")
     public ResponseEntity<JwtAuthResponse> login(@RequestBody JwtAuthRequest request) {
 
-        // 1. Email aur password verify karega
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
@@ -41,18 +42,18 @@ public class AuthController {
                 )
         );
 
-        // 2. Database se user load karega
+
         UserDetails userDetails =
                 customUserDetailService.loadUserByUsername(request.getEmail());
 
-        // 3. JWT Token generate karega
+
         String token = jwtHelper.generateToken(userDetails);
 
-        // 4. Response banayega
+
         JwtAuthResponse response = new JwtAuthResponse();
         response.setToken(token);
 
-        // 5. Token client ko return karega
+
         return ResponseEntity.ok(response);
     }
 }

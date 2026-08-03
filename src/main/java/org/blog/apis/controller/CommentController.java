@@ -6,6 +6,7 @@ import org.blog.apis.payloads.CommentResponseDto;
 import org.blog.apis.services.CommentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +20,7 @@ public class CommentController {
         this.commentService = commentService;
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/posts/{postId}/users/{userId}/comments")
     public ResponseEntity<CommentResponseDto> create(@Valid @RequestBody CommentRequestDto request, @PathVariable Long userId, @PathVariable Long postId) {
         CommentResponseDto response = commentService.createComment(request, userId, postId);
@@ -37,6 +39,7 @@ public class CommentController {
         return ResponseEntity.ok(commentService.updateComment(requestDto, commentId));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @DeleteMapping("/comments/{commentId}")
     public ResponseEntity<Void> delete(@PathVariable Long commentId) {
         commentService.deleteComment(commentId);
