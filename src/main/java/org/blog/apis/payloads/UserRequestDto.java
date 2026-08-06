@@ -20,7 +20,7 @@ public class UserRequestDto {
     @NotBlank(message = "Email is required")
     private String email;
     @NotBlank(message = "password is required")
-    @Size(min = 6,max = 10, message = "password must be at least 6 character")
+    @Size(min = 6,max = 10, message = "password must be at least 6 character and max 10")
     private String password;
     @NotBlank(message = "About is required")
     private String about;
