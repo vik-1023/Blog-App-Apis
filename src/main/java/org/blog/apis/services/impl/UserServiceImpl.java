@@ -7,10 +7,12 @@ import org.blog.apis.payloads.UserRequestDto;
 import org.blog.apis.payloads.UserResponseDto;
 import org.blog.apis.repositories.RoleRepo;
 import org.blog.apis.repositories.UserRepositories;
+import org.blog.apis.services.RedisService;
 import org.blog.apis.services.UserServices;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.type.TypeReference;
 
 import java.util.List;
 
@@ -20,12 +22,14 @@ public class UserServiceImpl implements UserServices {
     private final ModelMapper modelMapper;
     private final PasswordEncoder passwordEncoder;
     private final RoleRepo roleRepo;
+    private final RedisService redisService;
 
-    public UserServiceImpl(UserRepositories repositories, ModelMapper modelMapper, PasswordEncoder ppasswordEncoder, RoleRepo roleRepo) {
+    public UserServiceImpl(UserRepositories repositories, ModelMapper modelMapper, PasswordEncoder ppasswordEncoder, RoleRepo roleRepo, RedisService redisService) {
         this.repositories = repositories;
         this.modelMapper = modelMapper;
         this.passwordEncoder = ppasswordEncoder;
         this.roleRepo = roleRepo;
+        this.redisService = redisService;
     }
 
 
@@ -36,29 +40,72 @@ public class UserServiceImpl implements UserServices {
         user.getRoles().add(role);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         User savedUser = repositories.save(user);
+        String usersKey = "users";
+        redisService.delete(usersKey);
         return modelMapper.map(savedUser, UserResponseDto.class);
     }
 
     @Override
     public List<UserResponseDto> showAllUsers() {
+        String key = "users";
+        List<UserResponseDto> cachedUsers =
+                redisService.get(
+                        key,
+                        new TypeReference<List<UserResponseDto>>() {
+                        }
+                );
+        if (cachedUsers != null) {
+            System.out.println("🔥 Users Cache Hit");
+            return cachedUsers;
+        }
+
+        System.out.println("❌ Users Cache Miss");
         List<User> allUsers = repositories.findAll();
-        return allUsers.stream().map(user -> modelMapper.map(user, UserResponseDto.class)).toList();
+        List<UserResponseDto> response = allUsers.stream().map(user -> modelMapper.map(user, UserResponseDto.class)).toList();
+        redisService.save(key, response);
+        return response;
     }
 
     @Override
     public UserResponseDto getUserUsingId(Long id) {
-        User user = repositories.findById(id).orElseThrow(() -> new ResourceNotFoundException("user", "id", id));
-        return modelMapper.map(user, UserResponseDto.class);
+
+        String key = "user:" + id;
+
+
+        UserResponseDto cachedUser =
+                redisService.get(key, UserResponseDto.class);
+
+        if (cachedUser != null) {
+            System.out.println("✅ User fetched from Redis");
+            return cachedUser;
+        }
+
+        System.out.println("❌ Cache Miss -> Fetching from MySQL");
+
+        User user = repositories.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("user", "id", id));
+
+        UserResponseDto response = modelMapper.map(user, UserResponseDto.class);
+
+        redisService.save(key, response);
+
+        return response;
     }
 
     @Override
     public UserResponseDto updateUserUsingId(UserRequestDto request, Long id) {
+
         User user = repositories.findById(id).orElseThrow(() -> new ResourceNotFoundException("user", "id", id));
         user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setAbout(request.getAbout());
         user.setPassword(request.getPassword());
         User updatedUser = repositories.save((user));
+        String key = "user:" + id;
+        String usersKey = "users";
+        redisService.delete(key);
+        redisService.delete(usersKey);
         return modelMapper.map(updatedUser, UserResponseDto.class);
     }
 
@@ -67,5 +114,9 @@ public class UserServiceImpl implements UserServices {
         User user = repositories.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("user", "id", id));
         repositories.delete(user);
+        String key = "user:" + id;
+        String usersKey = "users";
+        redisService.delete(key);
+        redisService.delete(usersKey);
     }
 }
